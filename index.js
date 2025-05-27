@@ -1,7 +1,12 @@
+const express = require('express');
+const app = express();
+const PORT = process.env.PORT || 3000;
+
 const { Client, GatewayIntentBits } = require('discord.js');
 const fs = require('fs');
 
-const TOKEN = 'process.env.DISCORD_BOT_TOKEN';
+// Discord Botのトークンは環境変数で設定してください！
+const TOKEN = process.env.DISCORD_BOT_TOKEN;
 const CHANNEL_ID = '1376213933697794142';
 
 const client = new Client({
@@ -11,6 +16,7 @@ const client = new Client({
 let schedule = {};
 const FILE_NAME = 'schedule.json';
 
+// スケジュール読み込み
 function loadSchedule() {
   if (fs.existsSync(FILE_NAME)) {
     const raw = fs.readFileSync(FILE_NAME);
@@ -18,10 +24,12 @@ function loadSchedule() {
   }
 }
 
+// スケジュール保存
 function saveSchedule() {
   fs.writeFileSync(FILE_NAME, JSON.stringify(schedule, null, 2));
 }
 
+// リマインダー確認
 function checkReminders() {
   const today = new Date().toISOString().split('T')[0];
   if (schedule[today]) {
@@ -32,6 +40,7 @@ function checkReminders() {
   }
 }
 
+// Discordメッセージ受信処理
 client.on('messageCreate', (message) => {
   if (message.author.bot) return;
   if (!message.content.startsWith('!add ')) return;
@@ -50,6 +59,7 @@ client.on('messageCreate', (message) => {
   message.reply(`登録しました：${date} - ${content}`);
 });
 
+// Bot起動時処理
 client.once('ready', () => {
   console.log('Botは起動しました');
   loadSchedule();
@@ -62,17 +72,15 @@ client.once('ready', () => {
   }, 60 * 1000);
 });
 
+// Botログイン
 client.login(TOKEN);
-const express = require('express');
-const app = express();
-const port = process.env.PORT || 3000;
 
-// RenderやUptimeRobotがアクセスする用の簡単なルート
+// RenderやUptimeRobotがアクセスするための簡単なHTTPルート
 app.get('/', (req, res) => {
   res.send('Bot is running!');
 });
 
-// サーバー起動
-app.listen(port, () => {
-  console.log(`Express server is running on port ${port}`);
+// Expressサーバー起動（1回だけ）
+app.listen(PORT, () => {
+  console.log(`Express server is running on port ${PORT}`);
 });
