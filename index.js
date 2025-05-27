@@ -49,7 +49,7 @@ function checkReminders() {
   const hour = now.getHours();
   const minute = now.getMinutes();
 
-  if (hour === 19 && minute === 15 && schedule[today] && !reminded[today]) {
+  if (hour === 19 && minute === 40 && schedule[today] && !reminded[today]) {
     const message = `【今日のリマインダー】${schedule[today]}`;
     client.channels.fetch(CHANNEL_ID)
       .then(channel => {
