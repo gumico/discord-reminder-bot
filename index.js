@@ -47,13 +47,14 @@ function checkReminders() {
   const now = new Date();
   const today = now.toISOString().split('T')[0];
   const hour = now.getHours();
+  const minute = now.getMinutes();
 
-  if (hour === 19 && schedule[today] && !reminded[today]) {
+  if (hour === 19 && minute === 15 && schedule[today] && !reminded[today]) {
     const message = `【今日のリマインダー】${schedule[today]}`;
     client.channels.fetch(CHANNEL_ID)
       .then(channel => {
         channel.send(message);
-        reminded[today] = true;  // 送信済みにする
+        reminded[today] = true;  // 一度送ったら記録
         saveReminded();
       })
       .catch(console.error);
