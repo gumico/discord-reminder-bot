@@ -5,8 +5,13 @@ const PORT = process.env.PORT || 3000;
 const { Client, GatewayIntentBits } = require('discord.js');
 const fs = require('fs');
 
-// Discord Botのトークンは環境変数で設定してください！
+// 環境変数からトークン取得
 const TOKEN = process.env.DISCORD_BOT_TOKEN;
+if (!TOKEN) {
+  console.error('ERROR: DISCORD_BOT_TOKENが設定されていません。');
+  process.exit(1);
+}
+
 const CHANNEL_ID = '1376213933697794142';
 
 const client = new Client({
@@ -21,22 +26,32 @@ function loadSchedule() {
   if (fs.existsSync(FILE_NAME)) {
     const raw = fs.readFileSync(FILE_NAME);
     schedule = JSON.parse(raw);
+    console.log('スケジュールを読み込みました:', schedule);
+  } else {
+    console.log('スケジュールファイルが存在しません。新規作成します。');
   }
 }
 
 // スケジュール保存
 function saveSchedule() {
   fs.writeFileSync(FILE_NAME, JSON.stringify(schedule, null, 2));
+  console.log('スケジュールを保存しました:', schedule);
 }
 
 // リマインダー確認
 function checkReminders() {
   const today = new Date().toISOString().split('T')[0];
+  console.log(`[${new Date().toISOString()}] checkReminders実行。今日の日付: ${today}`);
   if (schedule[today]) {
     const message = `【今日のリマインダー】${schedule[today]}`;
     client.channels.fetch(CHANNEL_ID)
-      .then(channel => channel.send(message))
+      .then(channel => {
+        console.log('メッセージ送信:', message);
+        return channel.send(message);
+      })
       .catch(console.error);
+  } else {
+    console.log('本日のリマインダーはありません。');
   }
 }
 
@@ -64,16 +79,19 @@ client.once('ready', () => {
   console.log('Botは起動しました');
   loadSchedule();
 
+  // 1分毎にリマインダー確認
   setInterval(() => {
-    const now = new Date();
-    if (now.getHours() === 0 && now.getMinutes() === 30) {
-      checkReminders();
-    }
+    checkReminders();
   }, 60 * 1000);
 });
 
-// Botログイン
-client.login(TOKEN);
+// ログイン試行
+client.login(TOKEN)
+  .then(() => console.log('Discordにログインしました'))
+  .catch(err => {
+    console.error('Discordログイン失敗:', err);
+    process.exit(1);
+  });
 
 // RenderやUptimeRobotがアクセスするための簡単なHTTPルート
 app.get('/', (req, res) => {
@@ -84,3 +102,4 @@ app.get('/', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Express server is running on port ${PORT}`);
 });
+
