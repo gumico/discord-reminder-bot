@@ -5,13 +5,7 @@ const PORT = process.env.PORT || 3000;
 const { Client, GatewayIntentBits } = require('discord.js');
 const fs = require('fs');
 
-// 環境変数からトークン取得
 const TOKEN = process.env.DISCORD_BOT_TOKEN;
-if (!TOKEN) {
-  console.error('ERROR: DISCORD_BOT_TOKENが設定されていません。');
-  process.exit(1);
-}
-
 const CHANNEL_ID = '1376213933697794142';
 
 const client = new Client({
@@ -19,39 +13,50 @@ const client = new Client({
 });
 
 let schedule = {};
-const FILE_NAME = 'schedule.json';
+const SCHEDULE_FILE = 'schedule.json';
+
+let reminded = {};
+const REMINDED_FILE = 'reminded.json';
 
 // スケジュール読み込み
 function loadSchedule() {
-  if (fs.existsSync(FILE_NAME)) {
-    const raw = fs.readFileSync(FILE_NAME);
-    schedule = JSON.parse(raw);
-    console.log('スケジュールを読み込みました:', schedule);
-  } else {
-    console.log('スケジュールファイルが存在しません。新規作成します。');
+  if (fs.existsSync(SCHEDULE_FILE)) {
+    schedule = JSON.parse(fs.readFileSync(SCHEDULE_FILE));
   }
 }
 
 // スケジュール保存
 function saveSchedule() {
-  fs.writeFileSync(FILE_NAME, JSON.stringify(schedule, null, 2));
-  console.log('スケジュールを保存しました:', schedule);
+  fs.writeFileSync(SCHEDULE_FILE, JSON.stringify(schedule, null, 2));
 }
 
-// リマインダー確認
+// リマインド済み情報読み込み
+function loadReminded() {
+  if (fs.existsSync(REMINDED_FILE)) {
+    reminded = JSON.parse(fs.readFileSync(REMINDED_FILE));
+  }
+}
+
+// リマインド済み情報保存
+function saveReminded() {
+  fs.writeFileSync(REMINDED_FILE, JSON.stringify(reminded, null, 2));
+}
+
+// 19時に一回だけリマインドを送る関数
 function checkReminders() {
-  const today = new Date().toISOString().split('T')[0];
-  console.log(`[${new Date().toISOString()}] checkReminders実行。今日の日付: ${today}`);
-  if (schedule[today]) {
+  const now = new Date();
+  const today = now.toISOString().split('T')[0];
+  const hour = now.getHours();
+
+  if (hour === 19 && schedule[today] && !reminded[today]) {
     const message = `【今日のリマインダー】${schedule[today]}`;
     client.channels.fetch(CHANNEL_ID)
       .then(channel => {
-        console.log('メッセージ送信:', message);
-        return channel.send(message);
+        channel.send(message);
+        reminded[today] = true;  // 送信済みにする
+        saveReminded();
       })
       .catch(console.error);
-  } else {
-    console.log('本日のリマインダーはありません。');
   }
 }
 
@@ -78,27 +83,17 @@ client.on('messageCreate', (message) => {
 client.once('ready', () => {
   console.log('Botは起動しました');
   loadSchedule();
+  loadReminded();
 
-  // 1分毎にリマインダー確認
-  setInterval(() => {
-    checkReminders();
-  }, 60 * 1000);
+  setInterval(checkReminders, 60 * 1000); // 1分ごとにチェック
 });
 
-// ログイン試行
-client.login(TOKEN)
-  .then(() => console.log('Discordにログインしました'))
-  .catch(err => {
-    console.error('Discordログイン失敗:', err);
-    process.exit(1);
-  });
+client.login(TOKEN);
 
-// RenderやUptimeRobotがアクセスするための簡単なHTTPルート
 app.get('/', (req, res) => {
   res.send('Bot is running!');
 });
 
-// Expressサーバー起動（1回だけ）
 app.listen(PORT, () => {
   console.log(`Express server is running on port ${PORT}`);
 });
