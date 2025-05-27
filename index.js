@@ -4,6 +4,7 @@ const PORT = process.env.PORT || 3000;
 
 const { Client, GatewayIntentBits } = require('discord.js');
 const fs = require('fs');
+const path = require('path');
 
 const TOKEN = process.env.DISCORD_BOT_TOKEN;
 const CHANNEL_ID = '1376213933697794142';
@@ -13,55 +14,59 @@ const client = new Client({
 });
 
 let schedule = {};
-const SCHEDULE_FILE = 'schedule.json';
+const SCHEDULE_FILE = path.join(__dirname, 'schedule.json');
 
 let reminded = {};
-const REMINDED_FILE = 'reminded.json';
+const REMINDED_FILE = path.join(__dirname, 'reminded.json');
 
-// スケジュール読み込み
 function loadSchedule() {
   if (fs.existsSync(SCHEDULE_FILE)) {
     schedule = JSON.parse(fs.readFileSync(SCHEDULE_FILE));
   }
 }
 
-// スケジュール保存
 function saveSchedule() {
   fs.writeFileSync(SCHEDULE_FILE, JSON.stringify(schedule, null, 2));
+  console.log('schedule.json saved');
 }
 
-// リマインド済み情報読み込み
 function loadReminded() {
   if (fs.existsSync(REMINDED_FILE)) {
     reminded = JSON.parse(fs.readFileSync(REMINDED_FILE));
   }
 }
 
-// リマインド済み情報保存
 function saveReminded() {
   fs.writeFileSync(REMINDED_FILE, JSON.stringify(reminded, null, 2));
+  console.log('reminded.json saved');
 }
 
-// 19時に一回だけリマインドを送る関数
-function checkReminders() {
+function getJSTDate() {
   const now = new Date();
+  return new Date(now.getTime() + 9 * 60 * 60 * 1000);
+}
+
+function checkReminders() {
+  const now = getJSTDate();
   const today = now.toISOString().split('T')[0];
   const hour = now.getHours();
   const minute = now.getMinutes();
 
-  if (hour === 19 && minute === 40 && schedule[today] && !reminded[today]) {
+  console.log(`Checking reminders at ${hour}:${minute} JST for date ${today}`);
+
+  if (hour === 20 && minute === 30 && schedule[today] && !reminded[today]) {
     const message = `【今日のリマインダー】${schedule[today]}`;
     client.channels.fetch(CHANNEL_ID)
       .then(channel => {
         channel.send(message);
-        reminded[today] = true;  // 一度送ったら記録
+        reminded[today] = true;
         saveReminded();
+        console.log('Reminder sent and saved.');
       })
       .catch(console.error);
   }
 }
 
-// Discordメッセージ受信処理
 client.on('messageCreate', (message) => {
   if (message.author.bot) return;
   if (!message.content.startsWith('!add ')) return;
@@ -80,13 +85,12 @@ client.on('messageCreate', (message) => {
   message.reply(`登録しました：${date} - ${content}`);
 });
 
-// Bot起動時処理
 client.once('ready', () => {
   console.log('Botは起動しました');
   loadSchedule();
   loadReminded();
 
-  setInterval(checkReminders, 60 * 1000); // 1分ごとにチェック
+  setInterval(checkReminders, 60 * 1000);
 });
 
 client.login(TOKEN);
