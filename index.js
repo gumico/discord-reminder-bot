@@ -54,7 +54,7 @@ function checkReminders() {
 
   console.log(`Checking reminders at ${hour}:${minute} JST for date ${today}`);
 
-  if (hour === 20 && minute === 30 && schedule[today] && !reminded[today]) {
+  if (hour === 20 && minute === 45 && schedule[today] && !reminded[today]) {
     const message = `【今日のリマインダー】${schedule[today]}`;
     client.channels.fetch(CHANNEL_ID)
       .then(channel => {
